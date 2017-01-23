@@ -281,7 +281,10 @@ void TServerSocket::listen() {
   std::memset(&hints, 0, sizeof(hints));
   hints.ai_family = PF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
-  hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
+  hints.ai_flags = AI_PASSIVE;
+  // If address is selected, we should be able to use loopback
+  if (address_.empty())
+    hints.ai_flags |= AI_ADDRCONFIG; // prohibits loopback
 
   // If address is not specified use wildcard address (NULL)
   TGetAddrInfoWrapper info(address_.empty() ? NULL : &address_[0], port, &hints);
@@ -298,6 +301,9 @@ void TServerSocket::listen() {
   // into ipv6 space.
   for (res = info.res(); res; res = res->ai_next) {
     if (res->ai_family == AF_INET6 || res->ai_next == NULL)
+      break;
+    // But if we have selected an address allow it to be IPV4
+    if (!address_.empty() && (res->ai_family == AF_INET))
       break;
   }
 
